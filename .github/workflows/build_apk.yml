@@ -23,11 +23,30 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Recreate Android Project Scaffold
+      - name: Recreate Android Project Scaffold & Force SDK 36
         run: |
           flutter create . --platforms=android --org com.college.portal --project-name college_app
-          # Set compileSdk and targetSdk to 35 for androidx 1.16 compatibility
-          sed -i 's/compileSdk = .*/compileSdk = 35/' android/app/build.gradle* || true
+          
+          # Replace compileSdkVersion and targetSdkVersion with 36 directly in build.gradle
+          sed -i -E 's/compileSdk(Version)? = .*/compileSdk = 36/g' android/app/build.gradle* || true
+          sed -i -E 's/compileSdk(Version)? [0-9]+/compileSdk 36/g' android/app/build.gradle* || true
+          sed -i -E 's/compileSdk(Version)? flutter\.compileSdkVersion/compileSdk 36/g' android/app/build.gradle* || true
+          sed -i -E 's/targetSdk(Version)? = .*/targetSdk = 36/g' android/app/build.gradle* || true
+          sed -i -E 's/targetSdk(Version)? [0-9]+/targetSdk 36/g' android/app/build.gradle* || true
+          sed -i -E 's/targetSdk(Version)? flutter\.targetSdkVersion/targetSdk 36/g' android/app/build.gradle* || true
+
+          # Force all subprojects/plugins to compile against SDK 36
+          cat << 'EOF' >> android/build.gradle
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          compileSdkVersion 36
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Install Dependencies
         run: flutter pub get
