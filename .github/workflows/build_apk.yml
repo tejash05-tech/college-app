@@ -25,7 +25,7 @@ jobs:
           channel: 'stable'
 
       - name: Recreate Android Project Scaffold
-        run: flutter create . --platforms=android --org com.college.portal
+        run: flutter create . --platforms=android --org com.college.portal --project-name college_app
 
       - name: Install Dependencies
         run: flutter pub get
