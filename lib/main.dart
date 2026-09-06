@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint('Firebase init note: $e');
-  }
+void main() {
   runApp(const CollegePortalApp());
 }
 
@@ -20,19 +10,18 @@ class CollegePortalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Academic Portal',
+      title: 'College Academic Portal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.indigo,
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+        scaffoldBackgroundColor: const Color(0xFFF6F8FA),
       ),
       home: const MainHomeScreen(),
     );
   }
 }
 
-// ------------------- MAIN HOME SCREEN WITH BOTTOM NAV -------------------
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
 
@@ -43,10 +32,20 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    NoticesView(),
-    MaterialsView(),
-    ApplicationsHubView(),
+  // નમૂના માટે લોકલ ડેટા (પછી આપણે આને ડેટાબેઝ સાથે જોડીશું)
+  final List<Map<String, String>> sampleNotices = [
+    {
+      'title': 'Mid-Semester Exam Timetable Announced',
+      'category': 'Exam',
+      'date': 'Today',
+      'desc': 'Mid-sem exams will commence from next Monday. Check your department schedule.'
+    },
+    {
+      'title': 'Fee Submission & Scholarship Circular',
+      'category': 'Academic',
+      'date': 'Yesterday',
+      'desc': 'Eligible students must verify their documents in the office by Friday.'
+    },
   ];
 
   @override
@@ -56,23 +55,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         title: const Text('Academic Portal', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            tooltip: 'Incharge Admin',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SimpleAdminScreen()),
-              );
-            },
-          ),
+        elevation: 1,
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildNoticesTab(),
+          _buildMaterialsTab(),
+          _buildApplicationsTab(),
         ],
       ),
-      body: _screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.campaign_outlined),
@@ -87,418 +82,112 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
             selectedIcon: Icon(Icons.assignment),
-            label: 'Apply Forms',
+            label: 'Forms / Apply',
           ),
         ],
       ),
     );
   }
-}
 
-// ------------------- 1. NOTICES TAB -------------------
-class NoticesView extends StatefulWidget {
-  const NoticesView({super.key});
-
-  @override
-  State<NoticesView> createState() => _NoticesViewState();
-}
-
-class _NoticesViewState extends State<NoticesView> {
-  String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Urgent', 'Academic', 'Exam', 'General'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _categories.map((cat) {
-                final isSelected = _selectedCategory == cat;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    selectedColor: Colors.indigo,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w600,
+  // ટેબ ૧: નોટિસ બોર્ડ
+  Widget _buildNoticesTab() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: sampleNotices.length,
+      itemBuilder: (context, index) {
+        final item = sampleNotices[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 1.5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        item['category']!,
+                        style: TextStyle(color: Colors.indigo.shade700, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
-                    onSelected: (val) {
-                      if (val) setState(() => _selectedCategory = cat);
-                    },
-                  ),
-                );
-              }).toList(),
+                    Text(item['date']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(item['title']!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(item['desc']!, style: TextStyle(fontSize: 13.5, color: Colors.grey.shade700)),
+              ],
             ),
           ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('notices')
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final docs = snapshot.data?.docs ?? [];
-              var filtered = docs.where((d) {
-                if (_selectedCategory == 'All') return true;
-                final data = d.data() as Map<String, dynamic>;
-                return (data['category'] ?? '').toString().toLowerCase() ==
-                    _selectedCategory.toLowerCase();
-              }).toList();
-
-              if (filtered.isEmpty) {
-                return const Center(child: Text('No notices available.'));
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final data = filtered[index].data() as Map<String, dynamic>;
-                  final title = data['title'] ?? 'Notice';
-                  final desc = data['description'] ?? '';
-                  final cat = data['category'] ?? 'General';
-                  final pdfUrl = data['attachmentUrl'] as String?;
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Chip(
-                                label: Text(cat, style: const TextStyle(fontSize: 11)),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 4),
-                          Text(desc, style: const TextStyle(fontSize: 14)),
-                          if (pdfUrl != null && pdfUrl.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                              label: const Text('Download / View PDF'),
-                              onPressed: () async {
-                                final uri = Uri.parse(pdfUrl);
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                }
-                              },
-                            ),
-                          ]
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
-}
 
-// ------------------- 2. MATERIALS TAB -------------------
-class MaterialsView extends StatefulWidget {
-  const MaterialsView({super.key});
-
-  @override
-  State<MaterialsView> createState() => _MaterialsViewState();
-}
-
-class _MaterialsViewState extends State<MaterialsView> {
-  int _selectedSemester = 1;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: List.generate(8, (i) {
-                final sem = i + 1;
-                final isSelected = _selectedSemester == sem;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text('Sem $sem'),
-                    selected: isSelected,
-                    selectedColor: Colors.indigo,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                    ),
-                    onSelected: (selected) {
-                      if (selected) setState(() => _selectedSemester = sem);
-                    },
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('materials')
-                .where('semester', isEqualTo: _selectedSemester)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return Center(child: Text('No materials uploaded for Sem $_selectedSemester yet.'));
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final title = data['title'] ?? 'Material';
-                  final subject = data['subjectName'] ?? '';
-                  final fileUrl = data['fileUrl'] ?? '';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Colors.indigo,
-                        child: Icon(Icons.file_present, color: Colors.white),
-                      ),
-                      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(subject),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.download),
-                        onPressed: () async {
-                          final uri = Uri.parse(fileUrl);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          }
-                        },
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ------------------- 3. APPLY FORMS HUB -------------------
-class ApplicationsHubView extends StatelessWidget {
-  const ApplicationsHubView({super.key});
-
-  final List<Map<String, String>> forms = const [
-    {'type': 'LEAVE', 'title': 'Leave Application'},
-    {'type': 'BONAFIDE', 'title': 'Bonafide Certificate Request'},
-    {'type': 'MEDICAL', 'title': 'Medical Leave Application'},
-    {'type': 'CHARACTER', 'title': 'Character Certificate Request'},
-    {'type': 'TC', 'title': 'Transfer Certificate (TC)'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
+  // ટેબ ૨: સ્ટડી મટિરિયલ
+  Widget _buildMaterialsTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'Select Form to Submit',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        const Text('Semester Subjects', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        ...forms.map((item) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: 10),
-            child: ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Colors.teal,
-                child: Icon(Icons.description, color: Colors.white),
-              ),
-              title: Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (ctx) => SubmitApplicationScreen(
-                      type: item['type']!,
-                      title: item['title']!,
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        }),
+        _materialTile('Mathematics & Statistics', 'Unit 1 & 2 Notes', Icons.picture_as_pdf),
+        _materialTile('Computer Fundamentals', 'Lecture Presentation (PPT)', Icons.slideshow),
+        _materialTile('Engineering Mechanics', 'Question Bank & Solved Papers', Icons.menu_book),
       ],
     );
   }
-}
 
-// ------------------- SUBMIT FORM SCREEN -------------------
-class SubmitApplicationScreen extends StatefulWidget {
-  final String type;
-  final String title;
-
-  const SubmitApplicationScreen({super.key, required this.type, required this.title});
-
-  @override
-  State<SubmitApplicationScreen> createState() => _SubmitApplicationScreenState();
-}
-
-class _SubmitApplicationScreenState extends State<SubmitApplicationScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _enrollController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _reasonController = TextEditingController();
-  bool _submitting = false;
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _submitting = true);
-
-    try {
-      await FirebaseFirestore.instance.collection('applications').add({
-        'studentName': _nameController.text.trim(),
-        'enrollmentNo': _enrollController.text.trim().toUpperCase(),
-        'studentEmail': _emailController.text.trim(),
-        'applicationType': widget.type,
-        'reason': _reasonController.text.trim(),
-        'status': 'Pending',
-        'submittedAt': Timestamp.now(),
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application Submitted Successfully!')),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Student Full Name *', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Enter name' : null,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _enrollController,
-                decoration: const InputDecoration(labelText: 'Enrollment / Roll No *', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Enter enrollment number' : null,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Student Email *', border: OutlineInputBorder()),
-                validator: (v) => v!.contains('@') ? null : 'Enter valid email',
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _reasonController,
-                maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Reason / Purpose *', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Enter reason' : null,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const CircularProgressIndicator()
-                      : const Text('Submit Application', style: TextStyle(fontSize: 16)),
-                ),
-              )
-            ],
-          ),
-        ),
+  Widget _materialTile(String title, String subtitle, IconData icon) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: CircleAvatar(backgroundColor: Colors.indigo.shade50, child: Icon(icon, color: Colors.indigo)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.download, color: Colors.indigo),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$title મટિરિયલ ડાઉનલોડ ટૂંક સમયમાં શરૂ થશે.')),
+          );
+        },
       ),
     );
   }
-}
 
-// ------------------- SIMPLE ADMIN CONSOLE SCREEN -------------------
-class SimpleAdminScreen extends StatelessWidget {
-  const SimpleAdminScreen({super.key});
+  // ટેબ ૩: ડિજિટલ ફોર્મ્સ
+  Widget _buildApplicationsTab() {
+    final forms = ['Leave Application', 'Bonafide Certificate', 'Medical Leave', 'Character Certificate', 'TC Application'];
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Incharge Console')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.verified_user, size: 70, color: Colors.indigo),
-              SizedBox(height: 14),
-              Text(
-                'Academic Incharge Dashboard',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('Apply for Documents / Leave', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        ...forms.map((form) => Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.description, color: Colors.white)),
+                title: Text(form, style: const TextStyle(fontWeight: FontWeight.w600)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$form ફોર્મ ખોલ્યું.')),
+                  );
+                },
               ),
-              SizedBox(height: 8),
-              Text(
-                'Access secure notice posting, application reviews, and study material uploads.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+            )),
+      ],
     );
   }
 }
